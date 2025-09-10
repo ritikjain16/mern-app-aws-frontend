@@ -6,7 +6,7 @@ const App = () => {
 
   const fetchBackend = async () => {
     try {
-      const res = await myAxios.get("/hi");
+      const res = await myAxios.get("/");
       setMsg(res.data.msg);
     } catch (e) {
       console.log(e);
