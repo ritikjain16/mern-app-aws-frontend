@@ -39,7 +39,7 @@ jobs:
           script: |
             set -e
             echo ">>> Pulling latest code"
-            cd /home/ubuntu/mern-app/mern-app-with-k8s-github-actions-aws
+            cd /home/ubuntu/mern-app/mern-app-aws-frontend
             git pull origin master
 
             echo ">>> Using IMAGE=${{ secrets.DOCKER_USERNAME }}/mern-frontend:${{ github.sha }}"   # 👈 print the IMAGE value
