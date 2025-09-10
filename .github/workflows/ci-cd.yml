@@ -42,6 +42,8 @@ jobs:
             cd /home/ubuntu/mern-app/mern-app-aws-frontend
             git pull origin master
 
+            kubectl apply -f k8s/deployment.yml
+
             echo ">>> Using IMAGE=${{ secrets.DOCKER_USERNAME }}/mern-frontend:${{ github.sha }}"   # 👈 print the IMAGE value
 
             echo ">>> Updating Deployment"
