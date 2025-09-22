@@ -22,6 +22,6 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 80
-          env:
-            - name: VITE_BACKEND_URL
-              value: "http://mern-backend-service.mern-app.svc.cluster.local:5000"
+          # env:
+          #   - name: VITE_BACKEND_URL
+          #     value: "http://mern-backend-service.mern-app.svc.cluster.local:5000"
