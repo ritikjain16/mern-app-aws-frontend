@@ -21,6 +21,8 @@ const App = () => {
     <div>
       <h1>Hello I am Ritik Jain learning devops 16</h1>
       <h2>{msg}</h2>
+      <h2>{msg}</h2>
+      <h2>{msg}</h2>
     </div>
   );
 };
