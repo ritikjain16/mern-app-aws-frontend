@@ -1,0 +1,97 @@
+Step:1 - Setup an ec2 instance (t3.micro) for performing the cluster actions
+
+-> Then create iam role and give administrator access, and create one security credentials.
+
+Step:2 - Install required dependencies on ec2 instance
+
+    sudo apt-get update -y
+
+    ----- Docker --------
+    sudo apt install -y docker.io
+    sudo usermod -aG docker $USER
+    newgrp docker
+    docker --version
+    docker ps
+
+    # install kubectl
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    kubectl version --client
+
+    # install eksctl
+    curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+    sudo mv /tmp/eksctl /usr/local/bin
+    eksctl version
+
+    # install awscli 
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip awscliv2.zip
+    sudo ./aws/install
+
+Step:3 Aws Configure
+
+aws configure , give iam secret key, secret access key
+
+Ste4: Create cluster(using lastest kubernetes version 1.33)
+
+    eksctl create cluster --name=my-cluster \
+                      --region=us-west-2 \
+                      --version=1.33 \
+                      --without-nodegroup
+
+    Associate IAM OIDC Provider
+
+    eksctl utils associate-iam-oidc-provider \
+    --region us-west-2 \
+    --cluster my-cluster \
+    --approve
+
+    Create Nodegroup
+
+    eksctl create nodegroup --cluster=my-cluster \
+                       --region=us-west-2 \
+                       --name=my-cluster \
+                       --node-type=t2.medium \
+                       --nodes=2 \
+                       --nodes-min=2 \
+                       --nodes-max=2 \
+                       --node-volume-size=29 \
+                       --ssh-access \
+                       --ssh-public-key=ssh-instance-key-name
+
+    aws eks update-kubeconfig --region us-west-2 --name my-cluster
+
+Step 5: Install helm and install Amazon loadbalancer
+
+    Install IAM Policy
+
+    curl -o iam-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+    aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPolicy --policy-document file://iam-policy.json
+
+    Create IAM Role for Service Account(aws account id, visible on top right corner on clicking name)
+
+    eksctl create iamserviceaccount \
+  --cluster my-cluster \
+  --namespace kube-system \
+  --name aws-load-balancer-controller \
+  --attach-policy-arn arn:aws:iam::<your-account-id>:policy/AWSLoadBalancerControllerIAMPolicy \
+  --approve
+
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    helm version
+
+    helm repo add eks https://aws.github.io/eks-charts
+    helm repo update
+
+    helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=my-cluster \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller
+
+Step 6: Run your k8s services via cluster ip
+
+Step 7: Add ingress.yaml file and apply
+
+
+
