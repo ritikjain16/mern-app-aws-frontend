@@ -95,3 +95,275 @@ Step 7: Add ingress.yaml file and apply
 
 
 
+------------------------------------Chat GPT Modified Doc-------------------------------------------------------
+Perfect 👍 Adding **“Why we do this step”** makes it a professional **training-level document**. Below is the refined doc with **commands + explanations for each step** so anyone can follow and also understand *why* they are doing it.
+
+---
+
+# 🚀 Amazon EKS Setup on EC2 with Ingress & Load Balancer
+
+This guide walks you through setting up an **Amazon EKS Cluster** on an **EC2 instance**, configuring dependencies, and deploying workloads with **Ingress & AWS Load Balancer Controller**.
+Each step also explains **why** it is necessary.
+
+---
+
+## **Step 1: Launch EC2 Instance**
+
+**Why:** We need a control machine (jump host/bastion host) to run `eksctl`, `kubectl`, and AWS CLI commands. This EC2 acts as our admin workstation.
+
+1. Go to **AWS Console → EC2 → Launch Instance**
+
+   * **Instance Type:** `t3.micro` (for cluster management, not workloads)
+   * **AMI:** Ubuntu 22.04 (recommended)
+   * **Storage:** 20GB
+   * **Security Group:** Allow **SSH (22)**, **HTTPS (443)**, **HTTP (80)**
+2. Create an **IAM Role** with **AdministratorAccess** → attach it to this EC2.
+
+   * **Why:** Gives full permission to create and manage EKS, IAM roles, policies, etc.
+3. Generate **Security Credentials** (Access Key + Secret Key).
+
+   * **Why:** Required for `aws configure` to authenticate CLI with AWS account.
+
+---
+
+## **Step 2: Install Dependencies on EC2**
+
+**Why:** We need CLI tools (`awscli`, `kubectl`, `eksctl`, `docker`, `helm`) to create and manage EKS.
+
+Run:
+
+```bash
+# Update system
+sudo apt-get update -y
+
+# Install Docker (needed for container build/run if required)
+sudo apt install -y docker.io
+sudo usermod -aG docker $USER
+newgrp docker
+docker --version
+docker ps
+
+# Install kubectl (to interact with Kubernetes cluster)
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+kubectl version --client
+
+# Install eksctl (to create/manage EKS cluster easily)
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+sudo mv /tmp/eksctl /usr/local/bin
+eksctl version
+
+# Install AWS CLI v2 (to interact with AWS services)
+sudo apt install -y unzip
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+aws --version
+```
+
+---
+
+## **Step 3: Configure AWS CLI**
+
+**Why:** This links your EC2 (where CLI runs) to your AWS account via IAM credentials.
+
+```bash
+aws configure
+```
+
+Enter:
+
+* **AWS Access Key ID**
+* **AWS Secret Access Key**
+* **Default Region** → `us-west-2`
+* **Output Format** → `json`
+
+---
+
+## **Step 4: Create EKS Cluster**
+
+### 1. Create Cluster
+
+**Why:** EKS provides a managed Kubernetes control plane. We’re creating a cluster without worker nodes first.
+
+```bash
+eksctl create cluster --name=my-cluster \
+  --region=us-west-2 \
+  --version=1.33 \
+  --without-nodegroup
+```
+
+### 2. Associate IAM OIDC Provider
+
+**Why:** OIDC allows Kubernetes service accounts to assume IAM roles → required for AWS Load Balancer Controller and other addons.
+
+```bash
+eksctl utils associate-iam-oidc-provider \
+  --region us-west-2 \
+  --cluster my-cluster \
+  --approve
+```
+
+### 3. Create Nodegroup
+
+**Why:** Worker nodes (EC2) where your pods/containers will actually run.
+
+```bash
+eksctl create nodegroup --cluster=my-cluster \
+  --region=us-west-2 \
+  --name=my-cluster-nodes \
+  --node-type=t2.medium \
+  --nodes=2 \
+  --nodes-min=2 \
+  --nodes-max=2 \
+  --node-volume-size=29 \
+  --ssh-access \
+  --ssh-public-key=ssh-instance-key-name
+```
+
+### 4. Update kubeconfig
+
+**Why:** Connects your local `kubectl` to EKS cluster context.
+
+```bash
+aws eks update-kubeconfig --region us-west-2 --name my-cluster
+kubectl get nodes
+```
+
+---
+
+## **Step 5: Install Helm & AWS Load Balancer Controller**
+
+### 1. Install IAM Policy
+
+**Why:** AWS Load Balancer Controller needs IAM permissions to create/manage ALB/NLB.
+
+```bash
+curl -o iam-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPolicy --policy-document file://iam-policy.json
+```
+
+### 2. Create IAM Role for Service Account
+
+**Why:** Maps Kubernetes service account → IAM Role → IAM Policy for ALB controller.
+
+```bash
+eksctl create iamserviceaccount \
+  --cluster my-cluster \
+  --namespace kube-system \
+  --name aws-load-balancer-controller \
+  --attach-policy-arn arn:aws:iam::<your-account-id>:policy/AWSLoadBalancerControllerIAMPolicy \
+  --approve
+```
+
+### 3. Install Helm
+
+**Why:** Package manager for Kubernetes → used to install AWS Load Balancer Controller.
+
+```bash
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+helm version
+```
+
+### 4. Deploy AWS Load Balancer Controller
+
+**Why:** Manages ALBs/NLBs when you create Kubernetes Ingress resources.
+
+```bash
+helm repo add eks https://aws.github.io/eks-charts
+helm repo update
+
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=my-cluster \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller
+```
+
+Verify:
+
+```bash
+kubectl get deployment -n kube-system aws-load-balancer-controller
+```
+
+---
+
+## **Step 6: Deploy Kubernetes Services**
+
+**Why:** Services expose your pods to other services or the external world. For ingress, we start with `ClusterIP`.
+
+Example:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  type: ClusterIP
+  selector:
+    app: my-app
+  ports:
+    - port: 80
+      targetPort: 3000
+```
+
+```bash
+kubectl apply -f service.yaml
+```
+
+---
+
+## **Step 7: Configure Ingress**
+
+**Why:** Ingress provides HTTP/HTTPS routing → maps domain names/paths to services using ALB.
+
+`ingress.yaml`
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+spec:
+  rules:
+  - host: myapp.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: my-service
+            port:
+              number: 80
+```
+
+Apply:
+
+```bash
+kubectl apply -f ingress.yaml
+kubectl get ingress
+```
+
+You’ll get an **ALB DNS name**. Map it in **Route 53 / Domain Provider** as a **CNAME record** → so `myapp.example.com` points to ALB.
+
+---
+
+✅ **Summary:**
+
+* EC2 → Admin workstation
+* Dependencies → CLI tools for cluster ops
+* EKS Cluster → Control plane
+* Nodegroup → Worker nodes
+* IAM OIDC → Service account → AWS IAM roles
+* Helm + Load Balancer Controller → Manage ALBs
+* Services + Ingress → Expose apps to the world
+
+---
+
+Would you like me to also **add Route 53 + DuckDNS custom domain mapping steps** into this doc (with screenshots/commands) so you can map ALB → custom domain → browser access?
