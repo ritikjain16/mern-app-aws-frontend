@@ -96,6 +96,7 @@ Step 7: Add ingress.yaml file and apply
 
 
 ------------------------------------Chat GPT Modified Doc-------------------------------------------------------
+
 Perfect 👍 Adding **“Why we do this step”** makes it a professional **training-level document**. Below is the refined doc with **commands + explanations for each step** so anyone can follow and also understand *why* they are doing it.
 
 ---
