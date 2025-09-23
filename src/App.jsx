@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+h2act, { useEffect, useState } from "react";
 import "./App.css";
 import myAxios from "./axiosConfig";
 const App = () => {
@@ -20,9 +20,9 @@ const App = () => {
   return (
     <div>
       <h1>Hello We are Ritik Jain and Harsha Khadgi learning devops16</h1>
-      <h2>{msg}</h2>
-      <h2>{msg}</h2>
-      <h2>{msg}</h2>
+      <h2>1. {msg}</h2>
+      <h2>2. {msg}</h2>
+      <h2>3. {msg}</h2>
     </div>
   );
 };
