@@ -83,7 +83,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1 # change region
+          aws-region: us-west-2 # change region
 
       # -------------------------
       # Install dependencies
@@ -115,17 +115,29 @@ jobs:
           aws eks update-kubeconfig --region us-west-2 --name rj-cluster
 
       # -------------------------
+      # Login to DockerHub
+      # -------------------------
+      # - name: Login to DockerHub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # -------------------------
+      # Login to Amazon ECR
+      # -------------------------
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # -------------------------
       # Build and Push Docker image
       # -------------------------
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build & Push Docker image
         run: |
-          IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/mern-frontend
+          # IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/mern-frontend # if you use DockerHub
+          IMAGE_NAME=${{secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-2.amazonaws.com/mern-frontend # change it to your ECR repository
           IMAGE_TAG=${{ github.sha }}
           docker build -t $IMAGE_NAME:$IMAGE_TAG .
           docker push $IMAGE_NAME:$IMAGE_TAG
