@@ -19,7 +19,7 @@ const App = () => {
 
   return (
     <div>
-      <h1>Hello15 We are HR Ritik Jain and Harsha Khadgi learning devops16</h1>
+      <h1>Hello15 We are HR16 Ritik Jain and Harsha Khadgi learning devops16</h1>
       <h2>1. {msg}</h2>
       <h2>2. {msg}</h2>
       <h2>3. {msg}</h2>
