@@ -1,29 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import "./App.css";
-import myAxios from "./axiosConfig";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import Home from "./components/Home";
+import NotFound from "./components/NotFound";
+import Details from "./components/Details";
 const App = () => {
-  const [msg, setMsg] = useState("");
-
-  const fetchBackend = async () => {
-    try {
-      const res = await myAxios.get("/hi");
-      setMsg(res.data.msg);
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  useEffect(() => {
-    fetchBackend();
-  }, []);
-
   return (
-    <div>
-      <h1>Hello161708 We are HR16 Ritik Jain and Harsha Khadgi learning devops16</h1>
-      <h2>1. {msg}</h2>
-      <h2>2. {msg}</h2>
-      <h2>3. {msg}</h2>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/details" element={<Details />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 
