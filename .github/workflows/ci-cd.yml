@@ -83,7 +83,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2 # change region   
+          aws-region: us-west-2 # change region
 
       # -------------------------
       # Install dependencies
@@ -95,9 +95,7 @@ jobs:
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/region
-          
-          nn/bin/kubectl
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
       - name: Set up eksctl
         run: |
